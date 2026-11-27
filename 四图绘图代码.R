@@ -10,7 +10,6 @@ if (requireNamespace("showtext", quietly = TRUE)) {
   invisible(try(showtext::showtext_opts(dpi = 400), silent = TRUE))
 }
 
-## 定位脚本所在目录（source() 与 Rscript 两种方式都要能用）
 get_here <- function() {
   of <- tryCatch(sys.frame(1)$ofile, error = function(e) NULL)
   if (!is.null(of)) return(dirname(normalizePath(of)))
@@ -23,8 +22,6 @@ here <- get_here()
 setwd(here)
 outdir <- file.path(here, "figures_rebuilt_R1")
 dir.create(outdir, showWarnings = FALSE)
-
-## ---------------------------------------------------------- 全局字号
 PT   <- 1 / .pt         
 FS_TICK  <- 7
 FS_LAB   <- 8
