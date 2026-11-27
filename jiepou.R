@@ -1,21 +1,9 @@
-# ============================================================
-# 解剖学认知负荷数据分析 R 代码（最终优化版）
-# 功能：数据清洗 → LPA 潜在剖面分析 → 共表达网络 → 高清出图
-# 关键修正：
-#   1. 列名避免以数字开头（3d_ 改为 xr_）
-#   2. LPA 最终选定 4 类模型（基于 AIC/BIC/SABIC/Entropy）
-#   3. 网络图只保留正相关边，修复 FR 布局负权重报错
-#   4. 中文字体嵌入，修复 PDF 乱码，优化图例与线条粗细
-# ============================================================
-
 # 0. 环境准备
 rm(list = ls())
 library(readxl); library(dplyr); library(tidyr)
 library(tidyLPA); library(psych); library(igraph)
 library(ggplot2); library(writexl)
 
-# 设置中文字体（Windows 用户）
-# 如果画图仍乱码，请将 "Microsoft YaHei" 换成 "SimHei"
 windowsFonts(zh = windowsFont("Microsoft YaHei"))
 
 # ---------- 1. 读取数据 ----------
@@ -101,94 +89,10 @@ edge_list <- data.frame(
 )
 write.csv(edge_list, "network_edges_r04.csv", row.names = FALSE)
 
-# 4.1 构建并绘制高清网络图
-if (nrow(edge_list) == 0) {
-  cat("警告：没有 r > 0.4 的正相关边，跳过网络图。\n")
-} else {
-  g <- graph_from_data_frame(edge_list, directed = FALSE)
-  
-  # 节点属性：使用论文可读的中文标签（分两行显示避免拥挤）
-  var_labels <- c(
-    ps_men = "标本\n脑力", ps_phy = "标本\n体力", ps_tem = "标本\n时限",
-    ps_per = "标本\n表现失败", ps_eff = "标本\n努力", ps_com = "标本\n舒适",
-    td_men = "2D\n脑力", td_phy = "2D\n体力", td_tem = "2D\n时限",
-    td_per = "2D\n表现失败", td_eff = "2D\n努力", td_com = "2D\n舒适",
-    xr_men = "3D\n脑力", xr_phy = "3D\n体力", xr_tem = "3D\n时限",
-    xr_per = "3D\n表现失败", xr_eff = "3D\n努力", xr_com = "3D\n舒适"
-  )
-  
-  nm <- V(g)$name
-  mod_group <- ifelse(grepl("^ps", nm), "Specimen",
-                      ifelse(grepl("^td", nm), "2D", "3D"))
-  
-  V(g)$color <- c("#E64B35", "#4DBBD5", "#00A087")[as.integer(factor(mod_group))]
-  V(g)$size  <- 35
-  V(g)$label <- var_labels[nm]
-  V(g)$label.cex <- 2.2
-  V(g)$frame.color <- "white"
-  
-  # 边宽调整：系数*15 + 2.5，确保最低权重也有清晰线条
-  E(g)$width <- (E(g)$weight - 0.4) * 15 + 2.5
-  
-  pdf("network_plot_v2.pdf", width = 10, height = 8)
-  set.seed(123)
-  plot(g,
-       layout = layout_with_fr(g, weights = E(g)$weight, niter = 2000),
-       vertex.label = V(g)$label,
-       vertex.label.cex = V(g)$label.cex,
-       vertex.label.color = "black",
-       vertex.size = V(g)$size,
-       vertex.color = V(g)$color,
-       vertex.frame.color = V(g)$frame.color,
-       edge.width = E(g)$width,
-       edge.color = "gray40",
-       main = "共表达网络（r > 0.4）")
-  legend("topright",
-         legend = c("实物标本", "2D教材", "3D XR"),
-         pt.bg = c("#E64B35", "#4DBBD5", "#00A087"),
-         pch = 21, pt.cex = 2.5, bty = "n")
-  dev.off()
-}
 
-# ---------- 5. 剖面图（4 类 × 3 模态 × 6 维度） ----------
-class_means_long <- class_means %>%
-  pivot_longer(-class, names_to = "variable", values_to = "mean") %>%
-  mutate(
-    modality = factor(case_when(
-      grepl("^ps", variable) ~ "实物标本",
-      grepl("^td", variable) ~ "2D教材",
-      grepl("^xr", variable) ~ "3D XR"
-    ), levels = c("实物标本", "2D教材", "3D XR")),
-    dimension = factor(case_when(
-      grepl("men$", variable) ~ "脑力要求",
-      grepl("phy$", variable) ~ "体力要求",
-      grepl("tem$", variable) ~ "时限要求",
-      grepl("per$", variable) ~ "表现失败感",
-      grepl("eff$", variable) ~ "努力程度",
-      grepl("com$", variable) ~ "情感舒适"
-    ), levels = c("脑力要求", "体力要求", "时限要求", "表现失败感", "努力程度", "情感舒适"))
-  )
 
-p <- ggplot(class_means_long, aes(x = dimension, y = mean,
-                                  color = factor(class), group = factor(class))) +
-  geom_line(linewidth = 1.2) +
-  geom_point(size = 3) +
-  facet_wrap(~ modality, nrow = 1) +
-  scale_color_brewer(palette = "Set1", name = "类别") +
-  labs(x = NULL, y = "均值（1–7分）") +
-  theme_bw(base_size = 13) +
-  theme(
-    text = element_text(family = "zh"),
-    axis.text.x = element_text(angle = 45, hjust = 1, size = 11),
-    strip.text = element_text(size = 12, face = "bold"),
-    legend.position = "right",
-    panel.grid.minor = element_blank()
-  )
-p
-ggsave("profile_plot_v2.pdf", p, width = 10, height = 4.5)
 
-cat("=== 全部完成 ===\n")
-print(table(X$class))
+ 
 
 
 
@@ -197,12 +101,7 @@ print(table(X$class))
 
 
 
-# ============================================================
-# 论文级高清出图代码（修复字号过小问题，输出 600 dpi TIFF）
-# ============================================================
 
-# 注册系统原生字体，防止乱码
-windowsFonts(zh = windowsFont("Microsoft YaHei")) # 如果 Mac 请用 "PingFang SC"
 
 # ---------- 1. 网络图（画布缩小，字号放大） ----------
 if (nrow(edge_list) > 0) {
