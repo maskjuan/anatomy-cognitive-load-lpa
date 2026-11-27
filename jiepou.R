@@ -52,6 +52,12 @@ X$class <- as.factor(cls)
 raw$class <- as.factor(cls)
 cat("4 类模型的样本分布：\n"); print(table(cls))
 
+# 3.2b 分类不确定性（正文 2.1 的两个指标由此得出）
+post_z <- best$model$z                       # 每名学生的类后验概率
+post_max <- apply(post_z, 1, max)
+cat("平均最大后验概率：", round(mean(post_max), 3),
+    "；后验概率>=0.80 的比例：", round(100 * mean(post_max >= 0.80), 1), "%\n")
+
 # 3.3 类别均值
 class_means <- X %>%
   group_by(class) %>%
