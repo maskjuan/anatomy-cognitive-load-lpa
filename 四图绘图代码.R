@@ -1,35 +1,13 @@
-###########################################################
-# 《解剖学认知负荷的潜在剖面分型与教学配置》四张图 —— R 代码
-# 运行：把本文件与 class_means.xlsx、spearman_cor_matrix.csv、
-#       network_edges_r04.csv 放在同一目录，然后
-#       Rscript 四图绘图代码.R   或在 RStudio 里 source()
-# 依赖：ggplot2、patchwork、readxl、scales、dplyr、tidyr、ragg
-# 输出：同目录 figures_rebuilt_R\ 下的 4 个 PNG（400 dpi）
-#
-# 统一排版（与投稿版正文一致）：
-#   西文 Times New Roman，中文宋体
-#   面板/图题 8.5 pt、轴标题 8 pt、刻度 7 pt、图例 7.5 pt、数据标注 6.5 pt
-#   线宽 1.1 pt（geom_line linewidth=0.39 mm ≈1.1 pt）、点 3~4 pt
-#   画布宽度 = 正文插入宽度：图1 16.0 cm、图2 11.0 cm、
-#   图3 14.5 cm、图4 13.5 cm —— 故图上 7 pt 刻度插入 Word 后仍是 7 pt
-###########################################################
-
 library(ggplot2)
 library(patchwork)
 library(readxl)
 library(scales)
 library(dplyr)
 library(tidyr)
-
-## 关键：不少中文生信环境在 .Rprofile 里执行了 showtext::showtext_auto()，
-## 它会把 ggplot 的 pt 字号按 showtext 自己的 dpi 重新换算，400 dpi 画布上
-## 7 pt 会被画成 2 pt 左右 —— 这正是“跑出来字特别小”的原因。这里显式关掉。
 if (requireNamespace("showtext", quietly = TRUE)) {
   invisible(try(showtext::showtext_auto(enable = FALSE), silent = TRUE))
   invisible(try(showtext::showtext_opts(dpi = 400), silent = TRUE))
 }
-
-## 定位脚本所在目录（source() 与 Rscript 两种方式都要能用）
 get_here <- function() {
   of <- tryCatch(sys.frame(1)$ofile, error = function(e) NULL)
   if (!is.null(of)) return(dirname(normalizePath(of)))
@@ -42,17 +20,14 @@ here <- get_here()
 setwd(here)
 outdir <- file.path(here, "figures_rebuilt_R1")
 dir.create(outdir, showWarnings = FALSE)
-
-## ---------------------------------------------------------- 全局字号
-PT   <- 1 / .pt          # pt -> mm，供 geom_text 使用
+PT   <- 1 / .pt  
 FS_TICK  <- 7
 FS_LAB   <- 8
 FS_LEG   <- 7.5
 FS_ANN   <- 6.5
 FS_TITLE <- 8.5
 FONT_EN  <- "Times New Roman"
-FONT_CN  <- "SimSun"                     # 宋体；若无此字体可改 "SimHei"
-
+FONT_CN  <- "SimSun"                 
 theme_pub <- function(base_size = FS_TICK, family = FONT_EN, legend = "bottom") {
   theme_classic(base_size = base_size, base_family = family) +
     theme(
@@ -120,7 +95,7 @@ p1 <- ggplot(long1, aes(x = dimension, y = score, colour = cls, group = cls)) +
 save_png(p1, "fig1_profile.png", 16.0, 11.0)
 
 ## ========================================================== 图2 性别构成
-fem <- c(`1` = 35, `2` = 50, `3` = 22, `4` = 51)   # 依 LPA 后验分类统计（原始公开数据无类别标签）
+fem <- c(`1` = 35, `2` = 50, `3` = 22, `4` = 51)  
 sex_df <- data.frame(cls = factor(names(n_class), levels = names(n_class))) %>%
   mutate(n = as.numeric(n_class[as.character(cls)]),
          fem = as.numeric(fem[as.character(cls)]),
@@ -167,17 +142,17 @@ mat <- read.csv(file.path(here, "spearman_cor_matrix.csv"), row.names = 1,
                 check.names = FALSE)
 n_v <- nrow(mat)
 labs <- paste0(MOD[sub("_.*", "", rownames(mat))], "-", DIM[sub(".*_", "", rownames(mat))])
-N_OBS <- 241                       # 样本量，用于把 r 换算成 P 再换算成 q
+N_OBS <- 241                     
 
 ## 逐对由 r 反算 P（t 近似，df = n-2），再对 153 对做 Benjamini–Hochberg 校正
 p_of_r <- function(r, n = N_OBS) 2 * pt(abs(r) * sqrt(n - 2) / sqrt(1 - r^2),
                                         df = n - 2, lower.tail = FALSE)
 
 pairs <- expand.grid(i = seq_len(n_v), j = seq_len(n_v)) %>%
-  filter(i < j) %>%                                   # 只取上三角，共 153 对
+  filter(i < j) %>%                                
   mutate(r = mat[cbind(i, j)],
          p = p_of_r(r)) %>%
-  mutate(q = p.adjust(p, method = "BH"))              # BH 校正只在 153 对内进行
+  mutate(q = p.adjust(p, method = "BH"))         
 
 heat <- expand.grid(i = seq_len(n_v), j = seq_len(n_v)) %>%
   mutate(r = as.vector(mat[cbind(i, j)]),
