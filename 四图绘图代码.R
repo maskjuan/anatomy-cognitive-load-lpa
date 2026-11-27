@@ -167,13 +167,29 @@ mat <- read.csv(file.path(here, "spearman_cor_matrix.csv"), row.names = 1,
                 check.names = FALSE)
 n_v <- nrow(mat)
 labs <- paste0(MOD[sub("_.*", "", rownames(mat))], "-", DIM[sub(".*_", "", rownames(mat))])
+N_OBS <- 241                       # 样本量，用于把 r 换算成 P 再换算成 q
+
+## 逐对由 r 反算 P（t 近似，df = n-2），再对 153 对做 Benjamini–Hochberg 校正
+p_of_r <- function(r, n = N_OBS) 2 * pt(abs(r) * sqrt(n - 2) / sqrt(1 - r^2),
+                                        df = n - 2, lower.tail = FALSE)
+
+pairs <- expand.grid(i = seq_len(n_v), j = seq_len(n_v)) %>%
+  filter(i < j) %>%                                   # 只取上三角，共 153 对
+  mutate(r = mat[cbind(i, j)],
+         p = p_of_r(r)) %>%
+  mutate(q = p.adjust(p, method = "BH"))              # BH 校正只在 153 对内进行
 
 heat <- expand.grid(i = seq_len(n_v), j = seq_len(n_v)) %>%
   mutate(r = as.vector(mat[cbind(i, j)]),
          x = j, y = n_v + 1 - i,
          lab_x = factor(labs[j], levels = labs),
-         keep = i != j,
-         show = keep & abs(r) >= 0.40)
+         keep = i != j) %>%
+  left_join(pairs %>% select(i, j, q), by = c("i", "j")) %>%
+  left_join(pairs %>% rename(i2 = j, j2 = i) %>% select(i2, j2, q), by = c("i" = "i2", "j" = "j2")) %>%
+  mutate(q = coalesce(q.x, q.y),
+         show = keep & abs(r) >= 0.40 & q < 0.05)     # 与正文一致：q<0.05 且 |r|≥0.40
+cat("|r|>=0.40 的对数:", sum(pairs$r %>% abs() >= 0.40),
+    "；同时 q<0.05 的对数:", sum(pairs$r %>% abs() >= 0.40 & pairs$q < 0.05), "\n")
 
 p3 <- ggplot(heat, aes(x = x, y = y, fill = r)) +
   geom_tile(data = subset(heat, keep), colour = "white", linewidth = 0.2) +
