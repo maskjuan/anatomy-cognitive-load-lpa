@@ -1,17 +1,18 @@
-# 解剖学认知负荷的潜在剖面分型与教学配置 —— 分析代码
+# 解剖学认知负荷的潜在剖面分型与教学配置 —— 数据与分析代码
 
-本仓库收录论文《解剖学认知负荷的潜在剖面分型与教学配置》的分析与绘图代码，只含脚本，不含原始数据。
+本仓库收录论文《解剖学认知负荷的潜在剖面分型与教学配置》的去标识化原始数据、分析与绘图代码。
 
 ## 文件
 
+- `N241_NASA_TLX_Raw_Responses_Deidentified.xlsx`：241 名医学生的原始评分，三种学习模态各 6 项、共 18 项（原始列名为英文维度名，脚本内会重命名为 ps_/td_/xr_ 前缀）
 - `jiepou.R`：全流程分析脚本（数据清洗 -> 潜在剖面分析 LPA -> 共表达网络 -> 出图）
 - `四图绘图代码.R`：按投稿排版重绘正文四张图（画布宽度 16.0 / 11.0 / 14.5 / 13.5 cm，400 dpi，Times New Roman + 宋体）
 
 ## 数据来源
 
-原始去标识化数据为公开数据集：Zenodo, DOI: 10.5281/zenodo.23892312（241 名医学生，三种学习模态各 6 项、共 18 项 NASA-TLX 改编评分）。
+原始数据为公开的去标识化数据集：Zenodo, DOI: 10.5281/zenodo.23892312。本仓库附同一份数据文件，便于直接复现；正式引用请引用原始数据集。
 
-下载后把 `N241_NASA_TLX_Raw_Responses_Deidentified.xlsx`、`class_means.xlsx`、`LPA_fit_indices.xlsx`、`spearman_cor_matrix.csv`、`network_edges_r04.csv` 放在脚本同目录即可运行。
+`class_means.xlsx`、`LPA_fit_indices.xlsx`、`spearman_cor_matrix.csv`、`network_edges_r04.csv` 可由 `jiepou.R` 生成，放在脚本同目录即可运行全套流程。
 
 ## 运行环境
 
