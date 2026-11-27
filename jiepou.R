@@ -89,20 +89,13 @@ edge_list <- data.frame(
 )
 write.csv(edge_list, "network_edges_r04.csv", row.names = FALSE)
 
-
 sex_table <- table(X$class, raw$sex)
 print(sex_table) 
 # 执行卡方检验
 chisq_result <- chisq.test(sex_table)
 print(chisq_result)
 print(sex_table)
-
-
-
-library(ggplot2)
-library(dplyr)
-
-# 1. 构建数据框（与之前一致）
+# 1. 构建数据框
 sex_data <- data.frame(
   Class = factor(c(1, 1, 2, 2, 3, 3, 4, 4)),
   Sex = factor(c("Female", "Male", "Female", "Male", "Female", "Male", "Female", "Male"),
